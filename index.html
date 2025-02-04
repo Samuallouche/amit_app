@@ -126,6 +126,7 @@
     <!-- Cards for each day -->
   </div>
   <button onclick="generateSchedule()">Generate Weekly Summary</button>
+  <button onclick="generateCalendarEvents()">Generate Calendar Events</button>
 
   <div id="table-preview" class="table-preview" style="display: none;">
     <table id="schedule-table">
@@ -141,11 +142,11 @@
       </thead>
       <tbody id="table-body"></tbody>
     </table>
-    <button id="download-button" onclick="downloadImage()">Download Table as Image</button>
+    <button id="download-button" style="display: none;">Download Table as Image</button>
   </div>
 
   <script>
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const places = ["Home", "Hotel", "Amit's Place", "Samuel's Place", "Other"];
     const scheduleContainer = document.getElementById("schedule-container");
     const tableBody = document.getElementById("table-body");
@@ -242,10 +243,10 @@
         tableBody.appendChild(row);
       });
       document.getElementById("table-preview").style.display = "block";
-      document.getElementById("download-button").style.display = "block";
+      downloadTableAsImage();
     }
 
-    function downloadImage() {
+    function downloadTableAsImage() {
       const tableElement = document.getElementById("schedule-table");
       html2canvas(tableElement).then(canvas => {
         const link = document.createElement("a");
@@ -253,6 +254,36 @@
         link.download = "weekly_schedule.png";
         link.click();
       });
+    }
+
+    function generateCalendarEvents() {
+      const weekStartDate = prompt("Enter the start date of the week (YYYY-MM-DD):");
+      if (!weekStartDate) return;
+
+      const events = schedule.map((entry, index) => {
+        const date = new Date(weekStartDate);
+        date.setDate(date.getDate() + index); // Increment date for each day
+        return {
+          title: `${entry.day} - ${entry.sleepingTogether ? "Together" : "Apart"} ${entry.dateNight ? "(Date Night)" : ""}`,
+          start: date.toISOString().split("T")[0],
+        };
+      });
+
+      const icsFile = createICSFile(events);
+      const link = document.createElement("a");
+      link.href = icsFile;
+      link.download = "weekly_events.ics";
+      link.click();
+    }
+
+    function createICSFile(events) {
+      let icsData = "BEGIN:VCALENDAR\nVERSION:2.0\n";
+      events.forEach(event => {
+        icsData += `BEGIN:VEVENT\nSUMMARY:${event.title}\nDTSTART:${event.start.replace(/-/g, "")}\nDTEND:${event.start.replace(/-/g, "")}\nEND:VEVENT\n`;
+      });
+      icsData += "END:VCALENDAR";
+
+      return `data:text/calendar;charset=utf-8,${encodeURIComponent(icsData)}`;
     }
 
     renderSchedule();
